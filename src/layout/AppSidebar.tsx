@@ -4,20 +4,25 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
+import { jwtDecode } from "jwt-decode";
 import {
   BoxCubeIcon,
-  CalenderIcon,
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
   ListIcon,
-  PageIcon,
   PieChartIcon,
   PlugInIcon,
   TableIcon,
   UserCircleIcon,
 } from "../icons/index";
-import SidebarWidget from "./SidebarWidget";
+
+interface TokenPayload {
+  email: string;
+  role: string;
+  exp: number;
+  sub: string;
+}
 
 type NavItem = {
   name: string;
@@ -26,77 +31,97 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-const navItems: NavItem[] = [
-  {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
-  },
-  {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/profile",
-  },
-
-  {
-    name: "Forms",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  },
-  {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
-  },
-  {
-    name: "Pages",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
-    ],
-  },
-];
-
-const othersItems: NavItem[] = [
-  {
-    icon: <PieChartIcon />,
-    name: "Charts",
-    subItems: [
-      { name: "Line Chart", path: "/line-chart", pro: false },
-      { name: "Bar Chart", path: "/bar-chart", pro: false },
-    ],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/alerts", pro: false },
-      { name: "Avatar", path: "/avatars", pro: false },
-      { name: "Badge", path: "/badge", pro: false },
-      { name: "Buttons", path: "/buttons", pro: false },
-      { name: "Images", path: "/images", pro: false },
-      { name: "Videos", path: "/videos", pro: false },
-    ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
-    ],
-  },
-];
-
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const decoded = jwtDecode<TokenPayload>(token);
+        setRole(decoded.role);
+      }
+    } catch (err) {
+      console.error("Erro ao decodificar token", err);
+      setRole(null);
+    }
+  }, []);
+
+  const baseNavItems: NavItem[] = [
+    {
+      icon: <GridIcon />,
+      name: "Dashboard",
+      subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+    },
+    {
+      name: "Forms",
+      icon: <ListIcon />,
+      subItems: [
+        { name: "Form Elements", path: "/form-elements", pro: false },
+        { name: "Formulário Ptec Com", path: "/ptec-com", pro: false },
+      ],
+    },
+    {
+      name: "Tables",
+      icon: <TableIcon />,
+      subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
+    },
+  ];
+  const othersItems: NavItem[] = [
+    {
+      icon: <PieChartIcon />,
+      name: "Charts",
+      subItems: [
+        { name: "Gráfico Situação", path: "/line-chart", pro: false },
+        { name: "Bar Chart", path: "/bar-chart", pro: false },
+        { name: "Gráfico Pizza", path: "/grafico-pizza", pro: false },
+      ],
+    },
+    {
+      icon: <BoxCubeIcon />,
+      name: "UI Elements",
+      subItems: [
+        { name: "Alerts", path: "/alerts", pro: false },
+        { name: "Avatar", path: "/avatars", pro: false },
+        { name: "Badge", path: "/badge", pro: false },
+        { name: "Buttons", path: "/buttons", pro: false },
+        { name: "Images", path: "/images", pro: false },
+        { name: "Videos", path: "/videos", pro: false },
+      ],
+    },
+    {
+      icon: <PlugInIcon />,
+      name: "Authentication",
+      subItems: [
+        { name: "Sign In", path: "/signin", pro: false },
+        { name: "Sign Up", path: "/signup", pro: false },
+      ],
+    },
+  ];
+
+  const navItems: NavItem[] =
+    role === "admin"
+      ? [
+          ...baseNavItems,
+          {
+            icon: <UserCircleIcon />,
+            name: "Usuários",
+            subItems: [
+              {
+                name: "Lista de Usuários",
+                path: "/profile",
+              },
+              {
+                name: "Cadastrar Usuário",
+                path: "/signup",
+              },
+            ],
+          },
+          
+        ]
+      : baseNavItems;
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -374,7 +399,7 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+        
       </div>
     </aside>
   );

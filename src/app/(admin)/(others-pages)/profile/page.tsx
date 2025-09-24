@@ -1,28 +1,80 @@
-import UserAddressCard from "@/components/user-profile/UserAddressCard";
-import UserInfoCard from "@/components/user-profile/UserInfoCard";
-import UserMetaCard from "@/components/user-profile/UserMetaCard";
-import { Metadata } from "next";
-import React from "react";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Next.js Profile | TailAdmin - Next.js Dashboard Template",
-  description:
-    "This is Next.js Profile page for TailAdmin - Next.js Tailwind CSS Admin Dashboard Template",
-};
+import React, { useEffect, useState } from "react";
+import UserTable from "@/components/tables/UserTable"; // certifique-se que esteja neste caminho
+import { useRouter } from "next/navigation";
 
-export default function Profile() {
+interface User {
+  id: number;
+  email: string;
+  role: string;
+}
+
+export default function UserTablePage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      router.push("/signin");
+      return;
+    }
+
+    fetch("http://localhost:3001/users", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error("Erro ao buscar usuários.");
+        }
+        const data = await res.json();
+        setUsers(data);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Erro ao buscar usuários.");
+      })
+      .finally(() => setLoading(false));
+  }, [router]);
+
+  if (loading) return <p className="text-center mt-10">Carregando...</p>;
+
   return (
-    <div>
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
-        <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-7">
-          Profile
-        </h3>
-        <div className="space-y-6">
-          <UserMetaCard />
-          <UserInfoCard />
-          <UserAddressCard />
-        </div>
-      </div>
+    <div className="p-6">
+      <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white/90">
+        Lista de Usuários
+      </h2>
+      <UserTable
+  data={users}
+  onEdit={(user) => router.push(`${user.id}/update`)}
+  onDelete={async (id) => {
+    const confirmDelete = confirm("Tem certeza que deseja excluir?");
+    if (!confirmDelete) return;
+  
+    try {
+      const res = await fetch(`http://localhost:3001/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+  
+      if (!res.ok) {
+        throw new Error("Erro ao excluir usuário.");
+      }
+  
+      setUsers((prev) => prev.filter((user) => user.id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao excluir usuário.");
+    }
+  }}
+/>
     </div>
   );
 }
